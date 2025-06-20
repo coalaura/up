@@ -35,7 +35,7 @@ jobs:
         mkdir -p build
         [[ "${{ matrix.goos }}" == "windows" ]] && EXT=".exe" || EXT=""
 
-        OUT="build/up_${{ matrix.type }}_${{ github.ref_name }}_${{ matrix.flavour }}_${{ matrix.goos }}_${{ matrix.goarch }}${EXT}"
+        OUT="build/up_${{ matrix.type }}_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}${EXT}"
 
         GOOS=${{ matrix.goos }} \
         GOARCH=${{ matrix.goarch }} \
@@ -50,7 +50,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: up_${{ matrix.type }}_${{ github.ref_name }}_${{ matrix.flavour }}_${{ matrix.goos }}_${{ matrix.goarch }}
+        name: up_${{ matrix.type }}_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}
         path: build/*
 
   release:
