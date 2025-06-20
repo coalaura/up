@@ -54,7 +54,7 @@ func main() {
 }
 
 func run(_ context.Context, cmd *cli.Command) error {
-	log.Println("loading certificate store")
+	log.Println("Loading certificate store...")
 
 	store, err := LoadCertificateStore()
 	if err != nil {
@@ -73,7 +73,7 @@ func run(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("failed to get key path: %v", err)
 	}
 
-	log.Printf("using key %s\n", kPath)
+	log.Printf("Using key: %s\n", kPath)
 
 	path = cmd.String("file")
 	if path == "" {
@@ -85,7 +85,7 @@ func run(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("failed to get file path: %v", err)
 	}
 
-	log.Printf("using file %s\n", fPath)
+	log.Printf("Using file: %s\n", fPath)
 
 	file, err := os.OpenFile(fPath, os.O_RDONLY, 0)
 	if err != nil {
@@ -101,9 +101,9 @@ func run(_ context.Context, cmd *cli.Command) error {
 
 	target = fmt.Sprintf("https://%s", target)
 
-	log.Printf("using target %s\n", target)
+	log.Printf("Using target: %s\n", target)
 
-	log.Printf("loading key")
+	log.Printf("Loading key...")
 
 	private, err := LoadPrivateKey(kPath)
 	if err != nil {
@@ -112,14 +112,14 @@ func run(_ context.Context, cmd *cli.Command) error {
 
 	public := base64.StdEncoding.EncodeToString(private.PublicKey().Marshal())
 
-	log.Println("requesting challenge")
+	log.Println("Requesting challenge...")
 
 	challenge, err := RequestChallenge(client, target, public)
 	if err != nil {
 		return err
 	}
 
-	log.Println("completing challenge")
+	log.Println("Completing challenge...")
 
 	response, err := CompleteChallenge(client, target, public, private, challenge)
 	if err != nil {

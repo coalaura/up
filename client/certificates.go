@@ -156,7 +156,7 @@ func NewPinnedClient(store *CertificateStore) *http.Client {
 			return nil
 		}
 
-		log.Printf("Server fingerprint (%s): %s\n", name, fingerprint)
+		log.Printf("Server fingerprint for %s: %s\n", name, fingerprint)
 		log.Print("Accept? [y/N]: ")
 
 		var confirm string

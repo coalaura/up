@@ -38,8 +38,6 @@ func main() {
 
 	r.Post("/receive", HandleReceiveRequest)
 
-	log.Println("Listening on :7966")
-
 	srv := &http.Server{
 		Addr:    ":7966",
 		Handler: r,
@@ -48,5 +46,6 @@ func main() {
 		},
 	}
 
+	log.Println("Server listening on :7966")
 	srv.ListenAndServeTLS("cert.pem", "key.pem")
 }

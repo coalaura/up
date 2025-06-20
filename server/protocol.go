@@ -32,14 +32,14 @@ func IsSignatureFormatValid(format string) bool {
 }
 
 func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized map[string]ssh.PublicKey) {
-	log.Printf("request: new request from %s\n", r.RemoteAddr)
+	log.Printf("request: received new request from %s\n", r.RemoteAddr)
 
 	var request internal.AuthRequest
 
 	if err := msgpack.NewDecoder(r.Body).Decode(&request); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 
-		log.Warning("request: failed to decode request")
+		log.Warning("request: failed to decode request payload")
 		log.WarningE(err)
 
 		return
@@ -49,7 +49,7 @@ func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized m
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 
-		log.Warning("request: failed to parse/authorize public key")
+		log.Warning("request: failed to parse or authorize public key")
 		log.WarningE(err)
 
 		return
@@ -77,14 +77,14 @@ func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized m
 }
 
 func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized map[string]ssh.PublicKey) {
-	log.Printf("complete: new completion from %s\n", r.RemoteAddr)
+	log.Printf("complete: received completion from %s\n", r.RemoteAddr)
 
 	var response internal.AuthResponse
 
 	if err := msgpack.NewDecoder(r.Body).Decode(&response); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 
-		log.Warning("complete: failed to decode response")
+		log.Warning("complete: failed to decode response payload")
 		log.WarningE(err)
 
 		return
@@ -94,7 +94,7 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 
-		log.Warning("complete: failed to parse/authorize public key")
+		log.Warning("complete: failed to parse or authorize public key")
 		log.WarningE(err)
 
 		return
@@ -170,7 +170,7 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 		PublicKey: public,
 	}, cache.DefaultExpiration)
 
-	log.Printf("complete: completed auth for %s\n", r.RemoteAddr)
+	log.Printf("complete: authentication completed for %s\n", r.RemoteAddr)
 
 	w.Header().Set("Content-Type", "application/msgpack")
 	msgpack.NewEncoder(w).Encode(internal.AuthResult{
@@ -179,7 +179,7 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 }
 
 func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
-	log.Printf("receive: request from %s\n", r.RemoteAddr)
+	log.Printf("receive: received request from %s\n", r.RemoteAddr)
 
 	token := r.Header.Get("Authorization")
 	if token == "" {
@@ -250,12 +250,12 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 
-		log.Warning("receive: failed to copy sent file")
+		log.Warning("receive: failed to save uploaded file")
 
 		return
 	}
 
-	log.Printf("receive: stored %s from %s (%d bytes)\n", name, r.RemoteAddr, read)
+	log.Printf("receive: stored file %s from %s (%d bytes)\n", name, r.RemoteAddr, read)
 
 	w.WriteHeader(http.StatusOK)
 }
