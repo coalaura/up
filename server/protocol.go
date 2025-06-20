@@ -5,11 +5,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/coalaura/up/internal"
@@ -51,7 +53,7 @@ func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized m
 	current, pass, fail := rates.Inc(ip)
 	defer fail()
 
-	if current > MaxParallel {
+	if current > MaxClientParallel || current == 0 {
 		w.WriteHeader(http.StatusTooManyRequests)
 
 		log.Warning("request: too many requests")
@@ -127,7 +129,7 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 	current, pass, fail := rates.Inc(ip)
 	defer fail()
 
-	if current > MaxParallel {
+	if current > MaxClientParallel || current == 0 {
 		w.WriteHeader(http.StatusTooManyRequests)
 
 		log.Warning("request: too many requests")
@@ -294,6 +296,8 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	t0 := time.Now()
+
 	reader, err := r.MultipartReader()
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -359,7 +363,7 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("receive: stored file %s from %s (%d bytes)\n", name, ip, read)
+	log.Printf("receive: stored file %s from %s (%d bytes, took %s)\n", name, ip, read, RoundSince(time.Since(t0)))
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -405,4 +409,11 @@ func SanitizeFilename(name string) string {
 	}
 
 	return cleaned.String()
+}
+
+func RoundSince(since time.Duration) time.Duration {
+	exp := int(math.Log10(float64(since)))
+	by := time.Duration(math.Pow(10, max(0, float64(exp)-2)))
+
+	return since.Round(by)
 }

@@ -11,7 +11,13 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
-const MaxParallel = 8
+const (
+	// Max amount of parallel sessions/challenges per client
+	MaxClientParallel = 8
+
+	// Max amount of parallel sessions/challenges overall
+	MaxGlobalParallel = MaxClientParallel * 8
+)
 
 var (
 	log = logger.New().DetectTerminal().WithOptions(logger.Options{

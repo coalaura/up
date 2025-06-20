@@ -7,7 +7,10 @@ import (
 
 type RateLimiter struct {
 	sync.Map
+	total atomic.Uint32
 }
+
+const MinusOne uint32 = ^uint32(0)
 
 func NewRateLimiter() *RateLimiter {
 	return &RateLimiter{}
@@ -25,6 +28,12 @@ func (rl *RateLimiter) Get(key string) *atomic.Uint32 {
 }
 
 func (rl *RateLimiter) Inc(key string) (uint32, func(), func()) {
+	if rl.total.Add(1) > MaxGlobalParallel {
+		rl.total.Add(MinusOne)
+
+		return 0, nil, nil
+	}
+
 	val := rl.Get(key)
 	new := val.Add(1)
 
@@ -39,14 +48,17 @@ func (rl *RateLimiter) Inc(key string) (uint32, func(), func()) {
 			return
 		}
 
-		val.Add(^uint32(0))
+		rl.total.Add(MinusOne)
+		val.Add(MinusOne)
 	}
 
 	return new, pass, fail
 }
 
 func (rl *RateLimiter) Dec(key string) uint32 {
+	rl.total.Add(MinusOne)
+
 	val := rl.Get(key)
 
-	return val.Add(^uint32(0))
+	return val.Add(MinusOne)
 }
