@@ -135,6 +135,51 @@ func CertificateFingerprint(certificate *x509.Certificate) string {
 	return fmt.Sprintf("%s-%s", algo, hex.EncodeToString(sum[:]))
 }
 
+func PreFetchServerCertificate(store *CertificateStore, addr string) error {
+	conn, err := tls.DialWithDialer(&net.Dialer{
+		Timeout: 5 * time.Second,
+	}, "tcp", addr, &tls.Config{
+		InsecureSkipVerify: true,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	defer conn.Close()
+
+	state := conn.ConnectionState()
+	if len(state.PeerCertificates) == 0 {
+		return fmt.Errorf("no peer certificates")
+	}
+
+	certificate := state.PeerCertificates[0]
+
+	if certificate.Subject.CommonName != "up" {
+		return errors.New("invalid certificate subject")
+	}
+
+	name := state.ServerName
+	fingerprint := CertificateFingerprint(certificate)
+
+	if store.IsPinned(name, fingerprint) {
+		return nil
+	}
+
+	log.Printf("Server fingerprint for %s: %s\n", name, fingerprint)
+	log.Print("Accept? [y/N]: ")
+
+	var confirm string
+
+	fmt.Scanln(&confirm)
+
+	if strings.ToLower(strings.TrimSpace(confirm)) != "y" {
+		return errors.New("certificate rejected")
+	}
+
+	return store.Pin(name, fingerprint)
+}
+
 func NewPinnedClient(store *CertificateStore) *http.Client {
 	config := &tls.Config{
 		InsecureSkipVerify: true,
@@ -154,22 +199,11 @@ func NewPinnedClient(store *CertificateStore) *http.Client {
 		name := cs.ServerName
 		fingerprint := CertificateFingerprint(certificate)
 
-		if store.IsPinned(name, fingerprint) {
-			return nil
+		if !store.IsPinned(name, fingerprint) {
+			return errors.New("unknown certificate")
 		}
 
-		log.Printf("Server fingerprint for %s: %s\n", name, fingerprint)
-		log.Print("Accept? [y/N]: ")
-
-		var confirm string
-
-		fmt.Scanln(&confirm)
-
-		if strings.ToLower(strings.TrimSpace(confirm)) != "y" {
-			return errors.New("certificate rejected")
-		}
-
-		return store.Pin(name, fingerprint)
+		return nil
 	}
 
 	return &http.Client{

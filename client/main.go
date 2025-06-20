@@ -141,6 +141,10 @@ func run(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("failed to load certificate store: %v", err)
 	}
 
+	if err = PreFetchServerCertificate(store, hostname); err != nil {
+		return err
+	}
+
 	client := NewPinnedClient(store)
 
 	log.Println("Requesting challenge...")
