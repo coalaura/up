@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"net/http"
 	"time"
 
@@ -38,5 +39,14 @@ func main() {
 	r.Post("/receive", HandleReceiveRequest)
 
 	log.Println("Listening on :7966")
-	http.ListenAndServeTLS(":7966", "cert.pem", "key.pem", r)
+
+	srv := &http.Server{
+		Addr:    ":7966",
+		Handler: r,
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
+	}
+
+	srv.ListenAndServeTLS("cert.pem", "key.pem")
 }
