@@ -1,3 +1,3 @@
 #!/bin/bash
 
-go run ./client example.webp localhost:7966
+go run . send example.webp localhost:7966

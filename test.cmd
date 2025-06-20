@@ -1,3 +1,3 @@
 @echo off
 
-go run .\client test.bin localhost:7966
+go run . send test.bin localhost:7966
