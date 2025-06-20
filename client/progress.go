@@ -25,7 +25,7 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 	pr.read += int64(n)
 
 	percentage := float64(pr.read) / float64(pr.total) * 100
-	log.Printf("\r%s: %.1f%%", pr.label, percentage)
+	log.Printf("\r%s: %.1f%%  ", pr.label, percentage)
 
 	return n, err
 }

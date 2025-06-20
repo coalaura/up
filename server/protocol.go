@@ -39,7 +39,9 @@ func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized m
 
 	var request internal.AuthRequest
 
-	if err := msgpack.NewDecoder(r.Body).Decode(&request); err != nil {
+	reader := io.LimitReader(r.Body, 4096)
+
+	if err := msgpack.NewDecoder(reader).Decode(&request); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 
 		log.Warning("request: failed to decode request payload")
@@ -88,7 +90,9 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 
 	var response internal.AuthResponse
 
-	if err := msgpack.NewDecoder(r.Body).Decode(&response); err != nil {
+	reader := io.LimitReader(r.Body, 4096)
+
+	if err := msgpack.NewDecoder(reader).Decode(&response); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 
 		log.Warning("complete: failed to decode response payload")

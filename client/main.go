@@ -85,8 +85,15 @@ func run(_ context.Context, cmd *cli.Command) error {
 		port = hostArg[index+1:]
 	}
 
-	if found, _ := cfg.Get(hostname, "IdentityFile"); found != "" {
-		identity = found
+	if identity == "" {
+		if found, _ := cfg.Get(hostname, "IdentityFile"); found != "" {
+			identity = found
+		} else {
+			identity, err = FindPrivateKey()
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	if found, _ := cfg.Get(hostname, "HostName"); found != "" {
