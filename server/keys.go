@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -22,6 +23,16 @@ func GetAuthorizedKeysPath() (string, error) {
 func LoadAuthorizedKeys() (map[string]ssh.PublicKey, error) {
 	path, err := GetAuthorizedKeysPath()
 	if err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil, errors.New("authorized_keys file is missing")
+		} else if os.IsPermission(err) {
+			return nil, errors.New("no permissions to read authorized_keys file")
+		}
+
 		return nil, err
 	}
 
