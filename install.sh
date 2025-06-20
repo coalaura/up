@@ -30,21 +30,22 @@ if ! printf '%s\n' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
 fi
 
 BIN="up_${VERSION}_${OS}_${ARCH}"
+URL="https://github.com/coalaura/up/releases/download/${VERSION}/${BIN}"
 
 echo "Downloading ${BIN}..."
 
-if ! curl -sL "https://github.com/coalaura/up/releases/download/${VERSION}/${BIN}" -o up; then
+if ! curl -sL "$URL" -o /tmp/up; then
 	echo "Error: failed to download $URL" >&2
 	exit 1
 fi
 
-trap 'rm -f ./up' EXIT
+trap 'rm -f /tmp/up' EXIT
 
-chmod +x up
+chmod +x /tmp/up
 
 echo "Installing to /usr/local/bin/up requires sudo"
 
-if ! sudo install -m755 up /usr/local/bin/up; then
+if ! sudo install -m755 /tmp/up /usr/local/bin/up; then
 	echo "Error: install failed" >&2
 	exit 1
 fi
