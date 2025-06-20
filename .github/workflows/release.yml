@@ -16,7 +16,6 @@ jobs:
       matrix:
         goos:   [windows, linux, darwin]
         goarch: [amd64, arm64]
-        type: [client, server]
       fail-fast: false
 
     steps:
@@ -35,7 +34,7 @@ jobs:
         mkdir -p build
         [[ "${{ matrix.goos }}" == "windows" ]] && EXT=".exe" || EXT=""
 
-        OUT="build/up_${{ matrix.type }}_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}${EXT}"
+        OUT="build/up_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}${EXT}"
 
         GOOS=${{ matrix.goos }} \
         GOARCH=${{ matrix.goarch }} \
@@ -44,13 +43,12 @@ jobs:
           -trimpath \
           -buildvcs=false \
           -ldflags "-s -w -X 'main.Version=${{ github.ref_name }}'" \
-          -tags "${{ matrix.flavour }}" \
           -o "$OUT" ./${{ matrix.type }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: up_${{ matrix.type }}_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}
+        name: up_${{ github.ref_name }}_${{ matrix.goos }}_${{ matrix.goarch }}
         path: build/*
 
   release:

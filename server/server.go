@@ -1,11 +1,10 @@
-package main
+package server
 
 import (
 	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/coalaura/logger"
@@ -24,56 +23,37 @@ const (
 )
 
 var (
-	Version = "dev"
-	log     = logger.New().DetectTerminal().WithOptions(logger.Options{
+	log        *logger.Logger
+	rates      *RateLimiter
+	challenges *cache.Cache
+	sessions   *cache.Cache
+)
+
+func Before(ctx context.Context, _ *cli.Command) (context.Context, error) {
+	log = logger.New().DetectTerminal().WithOptions(logger.Options{
 		NoLevel: true,
 	})
 
-	challenges = cache.New(10*time.Second, time.Minute)
-	sessions   = cache.New(10*time.Second, time.Minute)
-	rates      = NewRateLimiter()
-)
+	rates = NewRateLimiter()
 
-func init() {
+	challenges = cache.New(10*time.Second, time.Minute)
 	challenges.OnEvicted(func(_ string, entry interface{}) {
 		challenge := entry.(internal.ChallengeEntry)
 
 		rates.Dec(challenge.Client)
 	})
 
+	sessions = cache.New(10*time.Second, time.Minute)
 	sessions.OnEvicted(func(_ string, entry interface{}) {
 		session := entry.(internal.SessionEntry)
 
 		rates.Dec(session.Client)
 	})
+
+	return ctx, nil
 }
 
-func main() {
-	app := &cli.Command{
-		Name:    "up",
-		Usage:   "up server",
-		Version: Version,
-		Flags: []cli.Flag{
-			&cli.UintFlag{
-				Name:    "port",
-				Aliases: []string{"p"},
-				Usage:   "custom port",
-				Value:   7966,
-			},
-		},
-		Action:                 run,
-		EnableShellCompletion:  true,
-		UseShortOptionHandling: true,
-		Suggest:                true,
-	}
-
-	err := app.Run(context.Background(), os.Args)
-	log.MustPanic(err)
-}
-
-func run(_ context.Context, cmd *cli.Command) error {
-	log.Printf("up server %s\n", Version)
-
+func Run(_ context.Context, cmd *cli.Command) error {
 	port := cmd.Uint("port")
 	if port <= 0 || port > 65534 {
 		port = 7966

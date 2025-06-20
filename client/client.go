@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"context"
@@ -13,40 +13,18 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-var (
-	Version = "dev"
+var log *logger.Logger
 
+func Before(ctx context.Context, _ *cli.Command) (context.Context, error) {
 	log = logger.New().DetectTerminal().WithOptions(logger.Options{
 		NoTime:  true,
 		NoLevel: true,
 	})
-)
 
-func main() {
-	app := &cli.Command{
-		Name:      "up",
-		Usage:     "up client",
-		Version:   Version,
-		ArgsUsage: "<file> <host>",
-		UsageText: "up [options] <file> <host>",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "identity",
-				Aliases: []string{"i"},
-				Usage:   "private key file for authentication",
-			},
-		},
-		Action:                 run,
-		EnableShellCompletion:  true,
-		UseShortOptionHandling: true,
-		Suggest:                true,
-	}
-
-	err := app.Run(context.Background(), os.Args)
-	log.MustPanic(err)
+	return ctx, nil
 }
 
-func run(_ context.Context, cmd *cli.Command) error {
+func Run(_ context.Context, cmd *cli.Command) error {
 	args := cmd.Args().Slice()
 	if len(args) != 2 {
 		return errors.New("Usage: up [options] <file> <host>")
