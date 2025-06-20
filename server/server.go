@@ -81,7 +81,7 @@ func Run(_ context.Context, cmd *cli.Command) error {
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: r,
 		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
+			MinVersion: tls.VersionTLS13,
 		},
 	}
 
