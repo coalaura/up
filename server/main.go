@@ -6,9 +6,12 @@ import (
 	"time"
 
 	"github.com/coalaura/logger"
+	"github.com/coalaura/up/internal"
 	"github.com/go-chi/chi/v5"
 	"github.com/patrickmn/go-cache"
 )
+
+const MaxParallel = 8
 
 var (
 	log = logger.New().DetectTerminal().WithOptions(logger.Options{
@@ -17,9 +20,22 @@ var (
 
 	challenges = cache.New(10*time.Second, time.Minute)
 	sessions   = cache.New(10*time.Second, time.Minute)
+	rates      = NewRateLimiter()
 )
 
 func main() {
+	challenges.OnEvicted(func(_ string, entry interface{}) {
+		challenge := entry.(internal.ChallengeEntry)
+
+		rates.Dec(challenge.Client)
+	})
+
+	sessions.OnEvicted(func(_ string, entry interface{}) {
+		session := entry.(internal.SessionEntry)
+
+		rates.Dec(session.Client)
+	})
+
 	authorized, err := LoadAuthorizedKeys()
 	log.MustPanic(err)
 

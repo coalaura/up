@@ -48,6 +48,18 @@ func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized m
 
 	log.Printf("request: received new request from %s\n", ip)
 
+	current, pass, fail := rates.Inc(ip)
+	defer fail()
+
+	if current > MaxParallel {
+		w.WriteHeader(http.StatusTooManyRequests)
+
+		log.Warning("request: too many requests")
+		log.WarningE(err)
+
+		return
+	}
+
 	var request internal.AuthRequest
 
 	reader := io.LimitReader(r.Body, 4096)
@@ -91,6 +103,8 @@ func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized m
 		PublicKey: public,
 	}, cache.DefaultExpiration)
 
+	pass()
+
 	log.Printf("request: issued challenge to %s\n", ip)
 
 	w.Header().Set("Content-Type", "application/msgpack")
@@ -109,6 +123,18 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 	}
 
 	log.Printf("complete: received completion from %s\n", ip)
+
+	current, pass, fail := rates.Inc(ip)
+	defer fail()
+
+	if current > MaxParallel {
+		w.WriteHeader(http.StatusTooManyRequests)
+
+		log.Warning("request: too many requests")
+		log.WarningE(err)
+
+		return
+	}
 
 	var response internal.AuthResponse
 
@@ -214,6 +240,8 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 	sessions.Set(token, internal.SessionEntry{
 		Client: ip,
 	}, cache.DefaultExpiration)
+
+	pass()
 
 	log.Printf("complete: authentication completed for %s\n", ip)
 
