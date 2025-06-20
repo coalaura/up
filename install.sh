@@ -29,6 +29,8 @@ if ! printf '%s\n' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
 	exit 1
 fi
 
+rm -f /tmp/up
+
 BIN="up_${VERSION}_${OS}_${ARCH}"
 URL="https://github.com/coalaura/up/releases/download/${VERSION}/${BIN}"
 
