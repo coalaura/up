@@ -7,6 +7,16 @@ UP is a simple file transfer tool that acts as a drop-in replacement for `scp` a
 - No setup: use the same SSH keys and host aliases you already have.
 - Small single binary for sending and receiving.
 
+## Installation
+
+You can bootstrap **up** with a single command.
+This script will detect your OS (`linux`/`darwin`) and CPU (`amd64`/`arm64`),
+download the correct binary and install it to `/usr/local/bin/up`.
+
+```bash
+curl -sL https://raw.githubusercontent.com/coalaura/up/master/install.sh | sh
+```
+
 ## Quick Start
 
 Pre-built binaries for common operating systems are available in the [releases](https://github.com/coalaura/up/releases/latest). Choose the download that matches your OS and architecture or build the latest development version yourself:
