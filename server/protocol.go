@@ -102,7 +102,6 @@ func HandleCompleteRequest(ctx *fasthttp.RequestCtx, authorized map[string]ssh.P
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 
 		log.Warning("complete: invalid challenge token")
-		log.WarningE(err)
 
 		return
 	}
@@ -113,7 +112,6 @@ func HandleCompleteRequest(ctx *fasthttp.RequestCtx, authorized map[string]ssh.P
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 
 		log.Warning("complete: challenge expired")
-		log.WarningE(err)
 
 		return
 	}
@@ -125,7 +123,6 @@ func HandleCompleteRequest(ctx *fasthttp.RequestCtx, authorized map[string]ssh.P
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 
 		log.Warning("complete: incorrect public key")
-		log.WarningE(err)
 
 		return
 	}
