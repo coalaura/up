@@ -49,7 +49,11 @@ func (rl *RateLimiter) Inc(key string) (uint32, func(), func()) {
 		}
 
 		rl.total.Add(MinusOne)
-		val.Add(MinusOne)
+
+		if val.Add(MinusOne) == 0 {
+			// potential race, but ok
+			rl.Map.Delete(key)
+		}
 	}
 
 	return new, pass, fail
