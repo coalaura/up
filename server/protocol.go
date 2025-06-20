@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+	"unicode"
 
 	"github.com/coalaura/up/internal"
 	"github.com/patrickmn/go-cache"
@@ -230,6 +232,16 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := filepath.Base(part.FileName())
+	name = SanitizeFilename(name)
+
+	if name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+
+		log.Warning("receive: invalid or missing filename")
+		log.WarningE(err)
+
+		return
+	}
 
 	if _, err := os.Stat("files"); os.IsNotExist(err) {
 		os.Mkdir("files", 0700)
@@ -276,4 +288,29 @@ func DecodeAndAuthorizePublicKey(public string, authorized map[string]ssh.Public
 	}
 
 	return key, nil
+}
+
+func SanitizeFilename(name string) string {
+	if name == "" {
+		return ""
+	}
+
+	var (
+		bad     bool
+		cleaned strings.Builder
+	)
+
+	for _, r := range name {
+		if r >= 32 && r != 127 && !unicode.IsControl(r) {
+			cleaned.WriteRune(r)
+
+			bad = false
+		} else if !bad {
+			cleaned.WriteRune('_')
+
+			bad = true
+		}
+	}
+
+	return cleaned.String()
 }
