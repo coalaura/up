@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/coalaura/logger"
 	"github.com/coalaura/up/internal"
 	"github.com/go-chi/chi/v5"
 	"github.com/patrickmn/go-cache"
+	"github.com/urfave/cli/v3"
 )
 
 const (
@@ -45,7 +49,35 @@ func init() {
 }
 
 func main() {
+	app := &cli.Command{
+		Name:    "up",
+		Usage:   "up server",
+		Version: Version,
+		Flags: []cli.Flag{
+			&cli.UintFlag{
+				Name:    "port",
+				Aliases: []string{"p"},
+				Usage:   "custom port",
+				Value:   7966,
+			},
+		},
+		Action:                 run,
+		EnableShellCompletion:  true,
+		UseShortOptionHandling: true,
+		Suggest:                true,
+	}
+
+	err := app.Run(context.Background(), os.Args)
+	log.MustPanic(err)
+}
+
+func run(_ context.Context, cmd *cli.Command) error {
 	log.Printf("up server %s\n", Version)
+
+	port := cmd.Uint("port")
+	if port <= 0 || port > 65534 {
+		port = 7966
+	}
 
 	authorized, err := LoadAuthorizedKeys()
 	log.MustPanic(err)
@@ -66,13 +98,14 @@ func main() {
 	r.Post("/receive", HandleReceiveRequest)
 
 	srv := &http.Server{
-		Addr:    ":7966",
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: r,
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS12,
 		},
 	}
 
-	log.Println("Server listening on :7966")
-	srv.ListenAndServeTLS("cert.pem", "key.pem")
+	log.Printf("Server listening on :%d\n", port)
+
+	return srv.ListenAndServeTLS("cert.pem", "key.pem")
 }

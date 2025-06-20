@@ -25,7 +25,7 @@ var (
 func main() {
 	app := &cli.Command{
 		Name:      "up",
-		Usage:     "UP client",
+		Usage:     "up client",
 		Version:   Version,
 		ArgsUsage: "<file> <host>",
 		UsageText: "up [options] <file> <host>",
