@@ -3,7 +3,7 @@ module github.com/coalaura/up
 go 1.24.2
 
 require (
-	github.com/coalaura/logger v1.4.4
+	github.com/coalaura/logger v1.4.5
 	github.com/fasthttp/router v1.5.4
 	github.com/urfave/cli/v3 v3.3.8
 	github.com/valyala/fasthttp v1.62.0
