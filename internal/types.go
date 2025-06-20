@@ -1,20 +1,16 @@
 package internal
 
 import (
-	"time"
-
 	"golang.org/x/crypto/ssh"
 )
 
 type ChallengeEntry struct {
 	Challenge []byte
 	PublicKey ssh.PublicKey
-	Expires   time.Time
 }
 
 type SessionEntry struct {
 	PublicKey ssh.PublicKey
-	Expires   time.Time
 }
 
 type AuthRequest struct {

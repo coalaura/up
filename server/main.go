@@ -2,10 +2,11 @@ package main
 
 import (
 	"net/http"
-	"sync"
+	"time"
 
 	"github.com/coalaura/logger"
 	"github.com/go-chi/chi/v5"
+	"github.com/patrickmn/go-cache"
 )
 
 var (
@@ -13,8 +14,8 @@ var (
 		NoLevel: true,
 	})
 
-	challenges sync.Map
-	sessions   sync.Map
+	challenges = cache.New(10*time.Second, time.Minute)
+	sessions   = cache.New(10*time.Second, time.Minute)
 )
 
 func main() {

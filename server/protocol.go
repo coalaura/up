@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/coalaura/up/internal"
+	"github.com/patrickmn/go-cache"
 	"github.com/vmihailenco/msgpack/v5"
 	"golang.org/x/crypto/ssh"
 )
@@ -65,11 +65,10 @@ func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized m
 		return
 	}
 
-	challenges.Store(challenge.Token, internal.ChallengeEntry{
+	challenges.Set(challenge.Token, internal.ChallengeEntry{
 		Challenge: raw,
 		PublicKey: public,
-		Expires:   time.Now().Add(20 * time.Second),
-	})
+	}, cache.DefaultExpiration)
 
 	log.Printf("request: issued challenge to %s\n", r.RemoteAddr)
 
@@ -101,7 +100,7 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 		return
 	}
 
-	entry, ok := challenges.LoadAndDelete(response.Token)
+	entry, ok := challenges.Get(response.Token)
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 
@@ -110,15 +109,9 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 		return
 	}
 
+	challenges.Delete(response.Token)
+
 	challenge := entry.(internal.ChallengeEntry)
-
-	if time.Now().After(challenge.Expires) {
-		w.WriteHeader(http.StatusBadRequest)
-
-		log.Warning("complete: challenge expired")
-
-		return
-	}
 
 	publicA := public.Marshal()
 	publicB := challenge.PublicKey.Marshal()
@@ -173,10 +166,9 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 		return
 	}
 
-	sessions.Store(token, internal.SessionEntry{
+	sessions.Set(token, internal.SessionEntry{
 		PublicKey: public,
-		Expires:   time.Now().Add(5 * time.Minute),
-	})
+	}, cache.DefaultExpiration)
 
 	log.Printf("complete: completed auth for %s\n", r.RemoteAddr)
 
@@ -198,8 +190,7 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entry, ok := sessions.LoadAndDelete(token)
-	if !ok {
+	if _, ok := sessions.Get(token); !ok {
 		w.WriteHeader(http.StatusBadRequest)
 
 		log.Warning("receive: invalid token")
@@ -207,15 +198,7 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session := entry.(internal.SessionEntry)
-
-	if time.Now().After(session.Expires) {
-		w.WriteHeader(http.StatusBadRequest)
-
-		log.Warning("receive: session expired")
-
-		return
-	}
+	sessions.Delete(token)
 
 	reader, err := r.MultipartReader()
 	if err != nil {
