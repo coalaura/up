@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -35,7 +36,17 @@ func IsSignatureFormatValid(format string) bool {
 }
 
 func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized map[string]ssh.PublicKey) {
-	log.Printf("request: received new request from %s\n", r.RemoteAddr)
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+
+		log.Warning("request: failed to split remote ip")
+		log.WarningE(err)
+
+		return
+	}
+
+	log.Printf("request: received new request from %s\n", ip)
 
 	var request internal.AuthRequest
 
@@ -76,17 +87,28 @@ func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized m
 
 	challenges.Set(challenge.Token, internal.ChallengeEntry{
 		Challenge: raw,
+		Client:    ip,
 		PublicKey: public,
 	}, cache.DefaultExpiration)
 
-	log.Printf("request: issued challenge to %s\n", r.RemoteAddr)
+	log.Printf("request: issued challenge to %s\n", ip)
 
 	w.Header().Set("Content-Type", "application/msgpack")
 	msgpack.NewEncoder(w).Encode(challenge)
 }
 
 func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized map[string]ssh.PublicKey) {
-	log.Printf("complete: received completion from %s\n", r.RemoteAddr)
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+
+		log.Warning("complete: failed to split remote ip")
+		log.WarningE(err)
+
+		return
+	}
+
+	log.Printf("complete: received completion from %s\n", ip)
 
 	var response internal.AuthResponse
 
@@ -127,6 +149,14 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 	challenges.Delete(response.Token)
 
 	challenge := entry.(internal.ChallengeEntry)
+
+	if challenge.Client != ip {
+		w.WriteHeader(http.StatusUnauthorized)
+
+		log.Warning("complete: incorrect client ip")
+
+		return
+	}
 
 	publicA := public.Marshal()
 	publicB := challenge.PublicKey.Marshal()
@@ -182,10 +212,10 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 	}
 
 	sessions.Set(token, internal.SessionEntry{
-		PublicKey: public,
+		Client: ip,
 	}, cache.DefaultExpiration)
 
-	log.Printf("complete: authentication completed for %s\n", r.RemoteAddr)
+	log.Printf("complete: authentication completed for %s\n", ip)
 
 	w.Header().Set("Content-Type", "application/msgpack")
 	msgpack.NewEncoder(w).Encode(internal.AuthResult{
@@ -194,7 +224,17 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 }
 
 func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
-	log.Printf("receive: received request from %s\n", r.RemoteAddr)
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+
+		log.Warning("receive: failed to split remote ip")
+		log.WarningE(err)
+
+		return
+	}
+
+	log.Printf("receive: received request from %s\n", ip)
 
 	token := r.Header.Get("Authorization")
 	if token == "" {
@@ -205,7 +245,8 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := sessions.Get(token); !ok {
+	entry, ok := sessions.Get(token)
+	if !ok {
 		w.WriteHeader(http.StatusUnauthorized)
 
 		log.Warning("receive: invalid token")
@@ -214,6 +255,16 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sessions.Delete(token)
+
+	session := entry.(internal.SessionEntry)
+
+	if session.Client != ip {
+		w.WriteHeader(http.StatusUnauthorized)
+
+		log.Warning("receive: incorrect client ip")
+
+		return
+	}
 
 	reader, err := r.MultipartReader()
 	if err != nil {
@@ -280,7 +331,7 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("receive: stored file %s from %s (%d bytes)\n", name, r.RemoteAddr, read)
+	log.Printf("receive: stored file %s from %s (%d bytes)\n", name, ip, read)
 
 	w.WriteHeader(http.StatusOK)
 }

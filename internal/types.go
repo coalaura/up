@@ -6,11 +6,12 @@ import (
 
 type ChallengeEntry struct {
 	Challenge []byte
+	Client    string
 	PublicKey ssh.PublicKey
 }
 
 type SessionEntry struct {
-	PublicKey ssh.PublicKey
+	Client string
 }
 
 type AuthRequest struct {
