@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/coalaura/logger"
 	"github.com/urfave/cli/v3"
@@ -46,6 +47,76 @@ func main() {
 }
 
 func run(_ context.Context, cmd *cli.Command) error {
+	args := cmd.Args().Slice()
+	if len(args) != 2 {
+		return errors.New("Usage: up [options] <file> <host>")
+	}
+
+	fileArg := args[0]
+	hostArg := args[1]
+
+	path, err := filepath.Abs(fileArg)
+	if err != nil {
+		return fmt.Errorf("failed to get file path: %v", err)
+	}
+
+	log.Printf("Using file: %s\n", path)
+
+	file, err := os.OpenFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %v", err)
+	}
+
+	defer file.Close()
+
+	cfg, err := LoadSSHConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load SSH config: %v", err)
+	}
+
+	hostname := hostArg
+	identity := cmd.String("identity")
+
+	if cfg != nil {
+		if found, _ := cfg.Get(hostArg, "HostName"); found != "" {
+			hostname = found
+
+			if port := strings.Index(hostname, ":"); port != -1 {
+				hostname = hostname[:port]
+			}
+		}
+
+		if found, _ := cfg.Get(hostArg, "IdentityFile"); found != "" {
+			identity = found
+		}
+	}
+
+	if hostname == "" {
+		return errors.New("missing or invalid host")
+	}
+
+	log.Printf("Using host: %s\n", hostname)
+
+	if identity == "" {
+		return errors.New("missing or invalid identity file")
+	}
+
+	path, err = filepath.Abs(identity)
+	if err != nil {
+		return fmt.Errorf("failed to get identity file path: %v", err)
+	}
+
+	log.Printf("Using identity file: %s\n", path)
+
+	log.Printf("Loading key...")
+
+	private, err := LoadPrivateKey(path)
+	if err != nil {
+		return fmt.Errorf("failed to load key: %v", err)
+	}
+
+	public := base64.StdEncoding.EncodeToString(private.PublicKey().Marshal())
+
 	log.Println("Loading certificate store...")
 
 	store, err := LoadCertificateStore()
@@ -55,68 +126,19 @@ func run(_ context.Context, cmd *cli.Command) error {
 
 	client := NewPinnedClient(store)
 
-	path := cmd.String("key")
-	if path == "" {
-		return errors.New("missing private key")
-	}
-
-	kPath, err := filepath.Abs(path)
-	if err != nil {
-		return fmt.Errorf("failed to get key path: %v", err)
-	}
-
-	log.Printf("Using key: %s\n", kPath)
-
-	path = cmd.String("file")
-	if path == "" {
-		return errors.New("missing file")
-	}
-
-	fPath, err := filepath.Abs(path)
-	if err != nil {
-		return fmt.Errorf("failed to get file path: %v", err)
-	}
-
-	log.Printf("Using file: %s\n", fPath)
-
-	file, err := os.OpenFile(fPath, os.O_RDONLY, 0)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %v", err)
-	}
-
-	defer file.Close()
-
-	target := cmd.String("target")
-	if target == "" {
-		return errors.New("missing target")
-	}
-
-	target = fmt.Sprintf("https://%s", target)
-
-	log.Printf("Using target: %s\n", target)
-
-	log.Printf("Loading key...")
-
-	private, err := LoadPrivateKey(kPath)
-	if err != nil {
-		return fmt.Errorf("failed to load key: %v", err)
-	}
-
-	public := base64.StdEncoding.EncodeToString(private.PublicKey().Marshal())
-
 	log.Println("Requesting challenge...")
 
-	challenge, err := RequestChallenge(client, target, public)
+	challenge, err := RequestChallenge(client, hostname, public)
 	if err != nil {
 		return err
 	}
 
 	log.Println("Completing challenge...")
 
-	response, err := CompleteChallenge(client, target, public, private, challenge)
+	response, err := CompleteChallenge(client, hostname, public, private, challenge)
 	if err != nil {
 		return err
 	}
 
-	return SendFile(client, target, response.Token, file)
+	return SendFile(client, hostname, response.Token, file)
 }
