@@ -35,6 +35,29 @@ Start the server (listens on port 7966) and then upload a file:
 
 Uploaded files are stored under the server's `files/` directory. Up will prompt to trust the server's certificate on first use and will remember it afterwards. Up is built to work behind reverse proxies like nginx.
 
+## Reverse Proxy Setup
+
+Here is an example nginx configuration that proxies HTTPS traffic to an Up server running locally. Replace the certificate paths with your own.
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name up.example.com;
+
+    ssl_certificate /etc/ssl/certs/example.pem;
+    ssl_certificate_key /etc/ssl/private/example.key;
+
+    location / {
+        proxy_pass https://127.0.0.1:7966;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_ssl_verify off;
+    }
+}
+```
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 License. See [LICENSE](LICENSE) for details.
