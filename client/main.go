@@ -108,7 +108,7 @@ func run(_ context.Context, cmd *cli.Command) error {
 
 	log.Printf("Using identity file: %s\n", path)
 
-	log.Printf("Loading key...")
+	log.Println("Loading key...")
 
 	private, err := LoadPrivateKey(path)
 	if err != nil {
