@@ -6,7 +6,6 @@ OS=$(uname -s | tr 'A-Z' 'a-z')
 	echo "Unsupported OS: $OS" >&2; exit 1;
 }
 
-# 2) Arch detection
 ARCH=$(uname -m)
 case "$ARCH" in
 	x86_64)
@@ -21,6 +20,8 @@ case "$ARCH" in
 		;;
 esac
 
+echo "Resolving latest version..."
+
 VERSION=$(curl -sL https://api.github.com/repos/coalaura/up/releases/latest | grep -Po '"tag_name": *"\K.*?(?=")')
 
 if ! printf '%s\n' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -28,9 +29,24 @@ if ! printf '%s\n' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
 	exit 1
 fi
 
-curl -sL "https://github.com/coalaura/up/releases/download/${VERSION}/up_${VERSION}_${OS}_${ARCH}" -o up \
-  && chmod +x up \
-  && install -m755 up /usr/local/bin/up \
-  && rm up
+BIN="up_${VERSION}_${OS}_${ARCH}"
 
-echo "up ${VERSION} installed to /usr/local/bin/up"
+echo "Downloading ${BIN}..."
+
+if ! curl -sL "https://github.com/coalaura/up/releases/download/${VERSION}/${BIN}" -o up; then
+	echo "Error: failed to download $URL" >&2
+	exit 1
+fi
+
+trap 'rm -f ./up' EXIT
+
+chmod +x up
+
+echo "Installing to /usr/local/bin/up requires sudo"
+
+if ! sudo install -m755 up /usr/local/bin/up; then
+	echo "Error: install failed" >&2
+	exit 1
+fi
+
+echo "up $VERSION installed to /usr/local/bin/up"
