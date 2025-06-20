@@ -20,7 +20,8 @@ const (
 )
 
 var (
-	log = logger.New().DetectTerminal().WithOptions(logger.Options{
+	Version = "dev"
+	log     = logger.New().DetectTerminal().WithOptions(logger.Options{
 		NoLevel: true,
 	})
 
@@ -29,7 +30,7 @@ var (
 	rates      = NewRateLimiter()
 )
 
-func main() {
+func init() {
 	challenges.OnEvicted(func(_ string, entry interface{}) {
 		challenge := entry.(internal.ChallengeEntry)
 
@@ -41,6 +42,10 @@ func main() {
 
 		rates.Dec(session.Client)
 	})
+}
+
+func main() {
+	log.Printf("up server %s\n", Version)
 
 	authorized, err := LoadAuthorizedKeys()
 	log.MustPanic(err)
