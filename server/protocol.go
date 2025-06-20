@@ -32,6 +32,8 @@ func IsSignatureFormatValid(format string) bool {
 }
 
 func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized map[string]ssh.PublicKey) {
+	log.Printf("request: new request from %s\n", r.RemoteAddr)
+
 	var request internal.AuthRequest
 
 	if err := msgpack.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -69,13 +71,15 @@ func HandleChallengeRequest(w http.ResponseWriter, r *http.Request, authorized m
 		Expires:   time.Now().Add(20 * time.Second),
 	})
 
-	log.Println("new auth request")
+	log.Printf("request: issued challenge to %s\n", r.RemoteAddr)
 
 	w.Header().Set("Content-Type", "application/msgpack")
 	msgpack.NewEncoder(w).Encode(challenge)
 }
 
 func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized map[string]ssh.PublicKey) {
+	log.Printf("complete: new completion from %s\n", r.RemoteAddr)
+
 	var response internal.AuthResponse
 
 	if err := msgpack.NewDecoder(r.Body).Decode(&response); err != nil {
@@ -174,7 +178,7 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 		Expires:   time.Now().Add(5 * time.Minute),
 	})
 
-	log.Println("auth completed")
+	log.Printf("complete: completed auth for %s\n", r.RemoteAddr)
 
 	w.Header().Set("Content-Type", "application/msgpack")
 	msgpack.NewEncoder(w).Encode(internal.AuthResult{
@@ -183,6 +187,8 @@ func HandleCompleteRequest(w http.ResponseWriter, r *http.Request, authorized ma
 }
 
 func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
+	log.Printf("receive: request from %s\n", r.RemoteAddr)
+
 	token := r.Header.Get("Authorization")
 	if token == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -257,13 +263,16 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 
 	defer target.Close()
 
-	if _, err := io.Copy(target, part); err != nil {
+	read, err := io.Copy(target, part)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 
 		log.Warning("receive: failed to copy sent file")
 
 		return
 	}
+
+	log.Printf("receive: stored %s from %s (%d bytes)\n", name, r.RemoteAddr, read)
 
 	w.WriteHeader(http.StatusOK)
 }
