@@ -74,25 +74,35 @@ func run(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("failed to load SSH config: %v", err)
 	}
 
-	hostname := hostArg
-	identity := cmd.String("identity")
+	var (
+		port     string
+		hostname = hostArg
+		identity = cmd.String("identity")
+	)
 
-	if cfg != nil {
-		if found, _ := cfg.Get(hostArg, "HostName"); found != "" {
-			hostname = found
+	if index := strings.Index(hostArg, ":"); index != -1 {
+		hostname = hostname[:index]
+		port = hostArg[index+1:]
+	}
 
-			if port := strings.Index(hostname, ":"); port != -1 {
-				hostname = hostname[:port]
-			}
-		}
+	if found, _ := cfg.Get(hostname, "IdentityFile"); found != "" {
+		identity = found
+	}
 
-		if found, _ := cfg.Get(hostArg, "IdentityFile"); found != "" {
-			identity = found
+	if found, _ := cfg.Get(hostname, "HostName"); found != "" {
+		hostname = found
+
+		if index := strings.Index(hostname, ":"); index != -1 {
+			hostname = hostname[:index]
 		}
 	}
 
 	if hostname == "" {
 		return errors.New("missing or invalid host")
+	}
+
+	if port != "" {
+		hostname += ":" + port
 	}
 
 	log.Printf("Using host: %s\n", hostname)

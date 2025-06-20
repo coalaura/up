@@ -8,11 +8,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 type PinnedCertificate struct {
@@ -96,13 +98,13 @@ func LoadCertificateStore() (*CertificateStore, error) {
 			continue
 		}
 
-		index := bytes.Index(line, []byte(" "))
-		if index == -1 {
+		fields := bytes.Fields(line)
+		if len(fields) != 2 {
 			return nil, fmt.Errorf("Invalid pinned certificate on line %d\n", index)
 		}
 
-		name := line[:index]
-		fingerprint := line[index:]
+		name := bytes.ToLower(fields[0])
+		fingerprint := bytes.ToLower(fields[1])
 
 		if len(fingerprint) < 64 {
 			return nil, fmt.Errorf("Invalid fingerprint on line %d\n", index)
@@ -173,6 +175,11 @@ func NewPinnedClient(store *CertificateStore) *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: config,
+			Dial: (&net.Dialer{
+				Timeout: 5 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 5 * time.Second,
+			IdleConnTimeout:     10 * time.Second,
 		},
 	}
 }
