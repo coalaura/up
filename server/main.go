@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	log = logger.New().WithOptions(logger.Options{
+	log = logger.New().DetectTerminal().WithOptions(logger.Options{
 		NoLevel: true,
 	})
 
@@ -19,6 +19,9 @@ var (
 
 func main() {
 	authorized, err := LoadAuthorizedKeys()
+	log.MustPanic(err)
+
+	err = EnsureCertificate("cert.pem", "key.pem")
 	log.MustPanic(err)
 
 	r := chi.NewRouter()
@@ -34,5 +37,5 @@ func main() {
 	r.Post("/receive", HandleReceiveRequest)
 
 	log.Println("Listening on :7966")
-	http.ListenAndServe(":7966", r)
+	http.ListenAndServeTLS(":7966", "cert.pem", "key.pem", r)
 }

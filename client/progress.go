@@ -2,34 +2,30 @@ package main
 
 import (
 	"io"
-
-	"github.com/coalaura/progress"
 )
 
 type ProgressReader struct {
 	io.Reader
-	bar *progress.Bar
+	label string
+	total int64
+	read  int64
 }
 
 func NewProgressReader(label string, total int64, reader io.Reader) *ProgressReader {
-	bar := progress.NewProgressBarWithTheme(label, total, progress.ThemeDots)
-
-	bar.Start()
-
 	return &ProgressReader{
 		Reader: reader,
-		bar:    bar,
+		label:  label,
+		total:  total,
 	}
 }
 
 func (pr *ProgressReader) Read(p []byte) (int, error) {
 	n, err := pr.Reader.Read(p)
 
-	pr.bar.IncrementBy(int64(n))
+	pr.read += int64(n)
+
+	percentage := float64(pr.read) / float64(pr.total) * 100
+	log.Printf("\r%s %.1f%%", pr.label, percentage)
 
 	return n, err
-}
-
-func (pr *ProgressReader) Close() {
-	pr.bar.Stop()
 }

@@ -1,7 +1,5 @@
 github.com/coalaura/logger v1.4.5 h1:xXazOab4qXaltUbD4TrQdSs2TtLB+k6t0t6y/M8LR3Q=
 github.com/coalaura/logger v1.4.5/go.mod h1:3HCYCWmsWmYW175e2/fZL9BWjJutr2W+7adeh1BPHkg=
-github.com/coalaura/progress v1.1.6 h1:SOeuvH3M/sUDezyjCZwBaoMWKyPVcBzhxrL1qZqtV2w=
-github.com/coalaura/progress v1.1.6/go.mod h1:2t8PFWZG8m+c6x8fBrGyJajclxVDLytNctoXVYyFPbc=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-chi/chi/v5 v5.2.2 h1:CMwsvRVTbXVytCk1Wd72Zy1LAsAh9GxMmSNWLHCG618=

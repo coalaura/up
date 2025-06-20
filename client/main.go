@@ -5,14 +5,21 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
+	"github.com/coalaura/logger"
 	"github.com/urfave/cli/v3"
 )
 
-var Version = "dev"
+var (
+	Version = "dev"
+
+	log = logger.New().DetectTerminal().WithOptions(logger.Options{
+		NoTime:  true,
+		NoLevel: true,
+	})
+)
 
 func main() {
 	app := &cli.Command{
@@ -42,14 +49,20 @@ func main() {
 		Suggest:                true,
 	}
 
-	if err := app.Run(context.Background(), os.Args); err != nil {
-		fmt.Printf("fatal: %v\n", err)
-
-		os.Exit(1)
-	}
+	err := app.Run(context.Background(), os.Args)
+	log.MustPanic(err)
 }
 
 func run(_ context.Context, cmd *cli.Command) error {
+	log.Println("loading certificate store")
+
+	store, err := LoadCertificateStore()
+	if err != nil {
+		return fmt.Errorf("failed to load certificate store: %v", err)
+	}
+
+	client := NewPinnedClient(store)
+
 	path := cmd.String("key")
 	if path == "" {
 		return errors.New("missing private key")
@@ -60,7 +73,7 @@ func run(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("failed to get key path: %v", err)
 	}
 
-	log.Printf("using key %s", kPath)
+	log.Printf("using key %s\n", kPath)
 
 	path = cmd.String("file")
 	if path == "" {
@@ -72,7 +85,7 @@ func run(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("failed to get file path: %v", err)
 	}
 
-	log.Printf("using file %s", fPath)
+	log.Printf("using file %s\n", fPath)
 
 	file, err := os.OpenFile(fPath, os.O_RDONLY, 0)
 	if err != nil {
@@ -88,7 +101,7 @@ func run(_ context.Context, cmd *cli.Command) error {
 
 	target = fmt.Sprintf("https://%s", target)
 
-	log.Printf("using target %s", target)
+	log.Printf("using target %s\n", target)
 
 	log.Printf("loading key")
 
@@ -101,19 +114,17 @@ func run(_ context.Context, cmd *cli.Command) error {
 
 	log.Println("requesting challenge")
 
-	challenge, err := RequestChallenge(target, public)
+	challenge, err := RequestChallenge(client, target, public)
 	if err != nil {
 		return err
 	}
 
 	log.Println("completing challenge")
 
-	response, err := CompleteChallenge(target, public, private, challenge)
+	response, err := CompleteChallenge(client, target, public, private, challenge)
 	if err != nil {
 		return err
 	}
 
-	log.Println("uploading file")
-
-	return SendFile(target, response.Token, file)
+	return SendFile(client, target, response.Token, file)
 }

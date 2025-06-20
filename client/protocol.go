@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func RequestChallenge(target, public string) (*internal.AuthChallenge, error) {
+func RequestChallenge(client *http.Client, target, public string) (*internal.AuthChallenge, error) {
 	request, err := msgpack.Marshal(internal.AuthRequest{
 		Public: public,
 	})
@@ -25,7 +25,7 @@ func RequestChallenge(target, public string) (*internal.AuthChallenge, error) {
 		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
 
-	response, err := http.Post(fmt.Sprintf("%s/request", target), "application/msgpack", bytes.NewReader(request))
+	response, err := client.Post(fmt.Sprintf("%s/request", target), "application/msgpack", bytes.NewReader(request))
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %v", err)
 	}
@@ -45,7 +45,7 @@ func RequestChallenge(target, public string) (*internal.AuthChallenge, error) {
 	return &challenge, nil
 }
 
-func CompleteChallenge(target, public string, private ssh.Signer, challenge *internal.AuthChallenge) (*internal.AuthResponse, error) {
+func CompleteChallenge(client *http.Client, target, public string, private ssh.Signer, challenge *internal.AuthChallenge) (*internal.AuthResponse, error) {
 	rawChallenge, err := base64.StdEncoding.DecodeString(challenge.Challenge)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode challenge: %v", err)
@@ -66,7 +66,7 @@ func CompleteChallenge(target, public string, private ssh.Signer, challenge *int
 		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
 
-	response, err := http.Post(fmt.Sprintf("%s/complete", target), "application/msgpack", bytes.NewReader(request))
+	response, err := client.Post(fmt.Sprintf("%s/complete", target), "application/msgpack", bytes.NewReader(request))
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %v", err)
 	}
@@ -86,7 +86,7 @@ func CompleteChallenge(target, public string, private ssh.Signer, challenge *int
 	return &result, nil
 }
 
-func SendFile(target, token string, file *os.File) error {
+func SendFile(client *http.Client, target, token string, file *os.File) error {
 	stat, err := file.Stat()
 	if err != nil {
 		return fmt.Errorf("failed to stat file: %v", err)
@@ -115,8 +115,7 @@ func SendFile(target, token string, file *os.File) error {
 		writer.Close()
 	}()
 
-	reader := NewProgressReader("Uploading", stat.Size(), pReader)
-	defer reader.Close()
+	reader := NewProgressReader("uploading file", stat.Size(), pReader)
 
 	request, err := http.NewRequest("POST", fmt.Sprintf("%s/receive", target), reader)
 	if err != nil {
@@ -126,13 +125,12 @@ func SendFile(target, token string, file *os.File) error {
 	request.Header.Set("Content-Type", writer.FormDataContentType())
 	request.Header.Set("Authorization", token)
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := client.Do(request)
 	if err != nil {
 		return fmt.Errorf("failed to send request: %v", err)
 	}
 
 	response.Body.Close()
-	reader.Close()
 
 	if response.StatusCode != http.StatusOK {
 		return errors.New(response.Status)
