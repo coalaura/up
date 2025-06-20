@@ -10,7 +10,7 @@ UP is a simple file transfer tool that acts as a drop-in replacement for `scp` a
 
 ## Quick Start
 
-Pre-built binaries for common operating systems are available on the releases page. Choose the download that matches your OS and architecture or build the latest development version yourself:
+Pre-built binaries for common operating systems are available in the [releases](https://github.com/coalaura/up/releases/latest). Choose the download that matches your OS and architecture or build the latest development version yourself:
 
 ```bash
 go build -o server ./server
