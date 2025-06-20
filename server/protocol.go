@@ -286,6 +286,18 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 
 	sessions.Delete(token)
 
+	current, _, fail := rates.Inc(ip)
+	defer fail()
+
+	if current > MaxClientParallel || current == 0 {
+		w.WriteHeader(http.StatusTooManyRequests)
+
+		log.Warning("receive: too many requests")
+		log.WarningE(err)
+
+		return
+	}
+
 	session := entry.(internal.SessionEntry)
 
 	if session.Client != ip {
