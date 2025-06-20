@@ -23,24 +23,16 @@ var (
 
 func main() {
 	app := &cli.Command{
-		Name:    "up",
-		Usage:   "UP client",
-		Version: Version,
+		Name:      "up",
+		Usage:     "UP client",
+		Version:   Version,
+		ArgsUsage: "<file> <host>",
+		UsageText: "up [options] <file> <host>",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:    "key",
-				Aliases: []string{"k"},
+				Name:    "identity",
+				Aliases: []string{"i"},
 				Usage:   "private key file for authentication",
-			},
-			&cli.StringFlag{
-				Name:    "file",
-				Aliases: []string{"f"},
-				Usage:   "file to upload",
-			},
-			&cli.StringFlag{
-				Name:    "target",
-				Aliases: []string{"t"},
-				Usage:   "target to upload to",
 			},
 		},
 		Action:                 run,
