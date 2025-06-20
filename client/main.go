@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
+	"path/filepath"
 
 	"github.com/urfave/cli/v3"
 )
@@ -50,15 +50,29 @@ func main() {
 }
 
 func run(_ context.Context, cmd *cli.Command) error {
-	kPath := cmd.String("key")
-	if kPath == "" {
+	path := cmd.String("key")
+	if path == "" {
 		return errors.New("missing private key")
 	}
 
-	fPath := cmd.String("file")
-	if fPath == "" {
+	kPath, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("failed to get key path: %v", err)
+	}
+
+	log.Printf("using key %s", kPath)
+
+	path = cmd.String("file")
+	if path == "" {
 		return errors.New("missing file")
 	}
+
+	fPath, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("failed to get file path: %v", err)
+	}
+
+	log.Printf("using file %s", fPath)
 
 	file, err := os.OpenFile(fPath, os.O_RDONLY, 0)
 	if err != nil {
@@ -72,11 +86,11 @@ func run(_ context.Context, cmd *cli.Command) error {
 		return errors.New("missing target")
 	}
 
-	if colon := strings.Index(target, ":"); colon != -1 {
-		target = fmt.Sprintf("http://%s", target)
-	} else {
-		target = fmt.Sprintf("https://%s", target)
-	}
+	target = fmt.Sprintf("https://%s", target)
+
+	log.Printf("using target %s", target)
+
+	log.Printf("loading key")
 
 	private, err := LoadPrivateKey(kPath)
 	if err != nil {
@@ -85,19 +99,21 @@ func run(_ context.Context, cmd *cli.Command) error {
 
 	public := base64.StdEncoding.EncodeToString(private.PublicKey().Marshal())
 
-	log.Println("Requesting challenge...")
+	log.Println("requesting challenge")
 
 	challenge, err := RequestChallenge(target, public)
 	if err != nil {
 		return err
 	}
 
-	log.Println("Completing challenge...")
+	log.Println("completing challenge")
 
 	response, err := CompleteChallenge(target, public, private, challenge)
 	if err != nil {
 		return err
 	}
+
+	log.Println("uploading file")
 
 	return SendFile(target, response.Token, file)
 }
