@@ -7,6 +7,12 @@ UP is a simple file transfer tool that acts as a drop-in replacement for `scp` a
 - No setup: use the same SSH keys and host aliases you already have.
 - Small single binary for sending and receiving.
 
+| | Protocol | Performance Considerations |
+| :- | :- | :- |
+| `scp` | SSH (TCP) | Typically uses a single TCP connection, limited by TCP window size and RTT. Can incur higher per-byte overhead from SSH protocol framing and encryption for raw data. |
+| `sftp` | SSH (TCP) | Similar to `scp` in TCP limitations, though the SFTP protocol itself can be slightly more efficient for block-based transfers. Still subject to SSH overhead. |
+| `https` | TLS over HTTP (TCP/QUIC) | Benefits from modern TCP stack optimizations. HTTP/2 and HTTP/3 (QUIC) allow for efficient multiplexing and reduced latency. Optimized for large data streams. |
+
 ## Installation
 
 You can bootstrap **up** with a single command.
