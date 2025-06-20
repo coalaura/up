@@ -232,10 +232,10 @@ func HandleReceiveRequest(w http.ResponseWriter, r *http.Request) {
 	name := filepath.Base(part.FileName())
 
 	if _, err := os.Stat("files"); os.IsNotExist(err) {
-		os.Mkdir("files", 0755)
+		os.Mkdir("files", 0700)
 	}
 
-	target, err := os.OpenFile(filepath.Join("files", name), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	target, err := os.OpenFile(filepath.Join("files", name), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 

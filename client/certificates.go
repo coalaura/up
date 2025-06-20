@@ -52,7 +52,7 @@ func (cs *CertificateStore) Pin(name, fingerprint string) error {
 		Fingerprint: fingerprint,
 	}
 
-	file, err := os.OpenFile(cs.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(cs.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
