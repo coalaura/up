@@ -1,11 +1,11 @@
 package main
 
 import (
+	"net/http"
 	"sync"
 
 	"github.com/coalaura/logger"
-	"github.com/fasthttp/router"
-	"github.com/valyala/fasthttp"
+	"github.com/go-chi/chi/v5"
 )
 
 var (
@@ -21,18 +21,18 @@ func main() {
 	authorized, err := LoadAuthorizedKeys()
 	log.MustPanic(err)
 
-	r := router.New()
+	r := chi.NewRouter()
 
-	r.POST("/request", func(ctx *fasthttp.RequestCtx) {
-		HandleChallengeRequest(ctx, authorized)
+	r.Post("/request", func(w http.ResponseWriter, r *http.Request) {
+		HandleChallengeRequest(w, r, authorized)
 	})
 
-	r.POST("/complete", func(ctx *fasthttp.RequestCtx) {
-		HandleCompleteRequest(ctx, authorized)
+	r.Post("/complete", func(w http.ResponseWriter, r *http.Request) {
+		HandleCompleteRequest(w, r, authorized)
 	})
 
-	r.POST("/receive", HandleReceiveRequest)
+	r.Post("/receive", HandleReceiveRequest)
 
 	log.Println("Listening on :7966")
-	fasthttp.ListenAndServe(":7966", r.Handler)
+	http.ListenAndServe(":7966", r)
 }
