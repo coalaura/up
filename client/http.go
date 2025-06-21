@@ -50,9 +50,9 @@ func NewHttpClient(verify func(tls.ConnectionState) error, useHttp3 bool) *http.
 	var transport http.RoundTripper
 
 	if useHttp3 {
-		transport = GetHttp2Transport(verify)
-	} else {
 		transport = GetHttp3Transport(verify)
+	} else {
+		transport = GetHttp2Transport(verify)
 	}
 
 	return &http.Client{
