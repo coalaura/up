@@ -11,6 +11,7 @@ import (
 	"github.com/coalaura/up/internal"
 	"github.com/go-chi/chi/v5"
 	"github.com/patrickmn/go-cache"
+	"github.com/quic-go/quic-go/http3"
 	"github.com/urfave/cli/v3"
 )
 
@@ -77,15 +78,33 @@ func Run(_ context.Context, cmd *cli.Command) error {
 
 	r.Post("/receive", HandleReceiveRequest)
 
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: r,
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS13,
-		},
+	tlsCfg := &tls.Config{
+		MinVersion: tls.VersionTLS13,
 	}
 
-	log.Printf("Server listening on :%d\n", port)
+	if cmd.Bool("http3") {
+		tlsCfg.NextProtos = []string{http3.NextProtoH3}
 
-	return srv.ListenAndServeTLS("cert.pem", "key.pem")
+		srv := &http3.Server{
+			Addr:      fmt.Sprintf(":%d", port),
+			Handler:   r,
+			TLSConfig: tlsCfg,
+		}
+
+		log.Printf("Server listening at :%d (udp/http3)...\n", port)
+
+		return srv.ListenAndServeTLS("cert.pem", "key.pem")
+	} else {
+		tlsCfg.NextProtos = []string{"h2"}
+
+		srv := &http.Server{
+			Addr:      fmt.Sprintf(":%d", port),
+			Handler:   r,
+			TLSConfig: tlsCfg,
+		}
+
+		log.Printf("Server listening at :%d (tcp/http2)\n", port)
+
+		return srv.ListenAndServeTLS("cert.pem", "key.pem")
+	}
 }

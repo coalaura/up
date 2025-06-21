@@ -8,13 +8,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 )
 
 type PinnedCertificate struct {
@@ -135,31 +133,31 @@ func CertificateFingerprint(certificate *x509.Certificate) string {
 	return fmt.Sprintf("%s-%s", algo, hex.EncodeToString(sum[:]))
 }
 
-func PreFetchServerCertificate(store *CertificateStore, addr string) error {
-	conn, err := tls.DialWithDialer(&net.Dialer{
-		Timeout: 5 * time.Second,
-	}, "tcp", addr, &tls.Config{
-		InsecureSkipVerify: true,
-	})
+func PreFetchServerCertificate(store *CertificateStore, hostname string, useHttp3 bool) error {
+	addr, err := EnsurePort(hostname)
+	if err != nil {
+		return err
+	}
+
+	var (
+		name        string
+		certificate *x509.Certificate
+	)
+
+	if useHttp3 {
+		certificate, name, err = ResolveTLSCertificateHttp3(addr)
+	} else {
+		certificate, name, err = ResolveTLSCertificateHttp2(addr)
+	}
 
 	if err != nil {
 		return err
 	}
 
-	defer conn.Close()
-
-	state := conn.ConnectionState()
-	if len(state.PeerCertificates) == 0 {
-		return fmt.Errorf("no peer certificates")
-	}
-
-	certificate := state.PeerCertificates[0]
-
 	if certificate.Subject.CommonName != "up" {
 		return errors.New("invalid certificate subject")
 	}
 
-	name := state.ServerName
 	fingerprint := CertificateFingerprint(certificate)
 
 	if store.IsPinned(name, fingerprint) {
@@ -180,12 +178,8 @@ func PreFetchServerCertificate(store *CertificateStore, addr string) error {
 	return store.Pin(name, fingerprint)
 }
 
-func NewPinnedClient(store *CertificateStore) *http.Client {
-	config := &tls.Config{
-		InsecureSkipVerify: true,
-	}
-
-	config.VerifyConnection = func(cs tls.ConnectionState) error {
+func NewPinnedClient(store *CertificateStore, useHttp3 bool) *http.Client {
+	return NewHttpClient(func(cs tls.ConnectionState) error {
 		if len(cs.PeerCertificates) == 0 {
 			return errors.New("missing certificate")
 		}
@@ -204,16 +198,5 @@ func NewPinnedClient(store *CertificateStore) *http.Client {
 		}
 
 		return nil
-	}
-
-	return &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: config,
-			Dial: (&net.Dialer{
-				Timeout: 5 * time.Second,
-			}).Dial,
-			TLSHandshakeTimeout: 5 * time.Second,
-			IdleConnTimeout:     10 * time.Second,
-		},
-	}
+	}, useHttp3)
 }

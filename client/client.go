@@ -75,10 +75,9 @@ func Run(_ context.Context, cmd *cli.Command) error {
 	}
 
 	if found, _ := cfg.Get(hostname, "HostName"); found != "" {
-		hostname = found
-
-		if index := strings.Index(hostname, ":"); index != -1 {
-			hostname = hostname[:index]
+		hostname, err = StripPort(found)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -119,11 +118,19 @@ func Run(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("failed to load certificate store: %v", err)
 	}
 
-	if err = PreFetchServerCertificate(store, hostname); err != nil {
+	useHttp3 := cmd.Bool("http3")
+
+	if useHttp3 {
+		log.Println("Using http3 over udp")
+	} else {
+		log.Println("Using http2 over tcp")
+	}
+
+	if err = PreFetchServerCertificate(store, hostname, useHttp3); err != nil {
 		return err
 	}
 
-	client := NewPinnedClient(store)
+	client := NewPinnedClient(store, useHttp3)
 
 	log.Println("Requesting challenge...")
 

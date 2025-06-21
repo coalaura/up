@@ -50,6 +50,13 @@ func main() {
 				Action: server.Run,
 			},
 		},
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:    "http3",
+				Aliases: []string{"h3"},
+				Usage:   "use experimental http3",
+			},
+		},
 		EnableShellCompletion:  true,
 		UseShortOptionHandling: true,
 		Suggest:                true,
