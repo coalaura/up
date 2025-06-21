@@ -6,6 +6,7 @@ UP is a simple file transfer tool that acts as a drop-in replacement for `scp` a
 - Transfers are noticeably quicker than traditional `scp` or `sftp`.
 - No setup: use the same SSH keys and host aliases you already have.
 - Small single binary for sending and receiving.
+- Uses TLS 1.3 with HTTP/2 by default and supports HTTP/3 with `--http3`/`-h3`.
 
 | | Protocol | Performance Considerations |
 | :- | :- | :- |
@@ -39,9 +40,9 @@ Start the server (listens on port 7966) and then upload a file:
 ./up send very_big.tar.xz localhost:7966
 ```
 
-Uploaded files are stored under the server's `files/` directory. Up will prompt to trust the server's certificate on first use and will remember it afterwards. Up is built to work behind reverse proxies like nginx.
+Uploaded files are stored under the server's `files/` directory. Up will prompt to trust the server's certificate on first use and will remember it afterwards. The server forces HTTP/2 with TLS 1.3 by default. Pass `--http3` or `-h3` on both the server and client to switch to HTTP/3 over QUIC. When HTTP/3 mode is enabled, Up will not work behind reverse proxies like nginx.
 
-## Reverse Proxy Setup
+## Reverse Proxy Setup (http2)
 
 Here is an example nginx configuration that proxies HTTPS traffic to an Up server running locally. Replace the certificate paths with your own.
 
